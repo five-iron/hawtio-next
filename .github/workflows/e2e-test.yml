@@ -14,6 +14,7 @@ on:
   push:
     branches:
       - main
+      - mmuzikar-ci-test-branch
     paths-ignore:
       - '**.md'
 
@@ -142,7 +143,7 @@ jobs:
           cp $REPORT_DIR/cucumber-reports/* results/$REPORT_DIR/
           ls $REPORT_DIR/cucumber-reports/
       - name: Archive test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: 'test-${{ env.REPORT_DIR }}'
@@ -151,13 +152,13 @@ jobs:
             ${{ env.REPORT_DIR }}/*.log
             ${{ env.REPORT_DIR }}/cucumber-reports/*
 
-      - name: Archive failed test reports
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: 'test-results'
-          path: |
-            results/**/*
+      # - name: Archive failed test reports
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: 'test-results'
+      #     path: |
+      #       results/**/*
 
   publish-results:
     runs-on: ubuntu-latest
@@ -169,9 +170,9 @@ jobs:
       pull-requests: write
     steps:
       - name: Download Test Results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: 'test-results'
+          pattern: 'test-*'
           path: 'test-results'
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -180,12 +181,16 @@ jobs:
           files: |
             **/Cucumber.xml
           json_file: results.json
+      - run: |
+          tree
+
+          cat results.json
       - name: Install xmllint
         run: sudo apt-get install -y xmlstarlet jq
       - name: Generate summary
         run: |
           export CHECK_URL=$(jq -r .check_url results.json)
-          wget https://raw.githubusercontent.com/hawtio/hawtio/3.x/tests/hawtio-test-suite/process_test_results.sh
+          wget https://raw.githubusercontent.com/hawtio/hawtio/mmuzikar-ci-test-branch/tests/hawtio-test-suite/process_test_results.sh
           wget https://raw.githubusercontent.com/hawtio/hawtio/3.x/tests/hawtio-test-suite/pr_results_template.xsl
           bash process_test_results.sh test-results > summary.md
       - name: Update summary
